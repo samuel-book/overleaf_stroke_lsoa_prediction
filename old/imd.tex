@@ -1,0 +1,236 @@
+% \documentclass[a4paper]{article}
+\documentclass[12pt]{extarticle}
+\usepackage[a4paper, left=1.5cm, right=1.5cm, top=1.5cm, bottom=2.0cm]{geometry}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{caption}  % for continuedfloat
+
+\usepackage{lscape} % For landscape pages
+\usepackage{afterpage}
+\usepackage{pdflscape} % To create landscape pages that show as landscape in PDF viewer
+\usepackage{parskip} % Adds white space between paragraphs
+
+
+\title{stroke\_lsoa\_prediction}
+\author{Anna Laws}
+\date{May 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Derive coefficients for the age-admissions prediction model.
+
+\begin{itemize}
+    \item Initial optimisation for order of magnitude of coefficients
+    \item Optimisation with grid of input coefficients
+    \item Finer grid of input coefficients
+\end{itemize}
+
+\section{IMD bands}
+
+Use 5 this time. 20\%, 40\%, 60\%, 80\%, 100\%.
+
+\section{Initial optimisation}
+
+To get a rough idea of the coefficient values.
+
+Need sensible starting values for the optimiser - otherwise stupid in, stupid out.
+
+Table~\ref{tab:initial_guess} shows the results of optimising using an initial guess. The optimised results are nearly always the same order of magnitude as the initial guesses.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{l l l l l l l l}
+    $q_{min}$ & $q_{max}$ & $c_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared \\
+    \hline
+    Initial & guess &  0.0004 & 0.0005 & 0.002 & 0.006 & 0.017 & -- \\
+    \hline
+    \\
+    $q_{min}$ & $q_{max}$ & c$_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared \\
+    \hline
+    0.8 & 1 & 0.00022 & 0.00076 & 0.00247 & 0.00294 & 0.0155 & 0.627 \\
+    0.6 & 0.8 & 0.00033 & 0.00041 & 0.00274 & 0.00555 & 0.0144 & 0.612 \\
+    0.4 & 0.6 & 0.00041 & 0.00074 & 0.00073 & 0.00555 & 0.0168 & 0.643 \\
+    0.2 & 0.4 & 0.00050 & 0.00199 & 0.00586 & 0.00059 & 0.0157 & 0.580 \\
+    0 & 0.2 & 0.00061 & 0.00000 & 0.01051 & 0.00000 & 0.0164 & 0.495 \\
+    \end{tabular}
+    \caption{Coefficients from the initial guess.}
+    \label{tab:initial_guess}
+\end{table}
+
+\section{Optimisation grid}
+
+Try lots. Allowed values:
+\begin{itemize}
+    \item $c_{<65}$ 0.0001, 0.0004, 0.0007
+    \item $c_{65-70}$ 0.0007, 0.001, 0.004
+    \item $c_{70-75}$ 0.0007, 0.001, 0.004
+    \item $c_{75-80}$ 0.0007, 0.001, 0.004
+    \item $c_{>80}$ 0.007, 0.01
+\end{itemize}
+
+Boundaries for each value:
+\begin{itemize}
+    \item {'0.0001': {'min': 7e-05, 'max': 0.0004},
+    \item '0.0004': {'min': 0.0001, 'max': 0.0007},
+    \item '0.0007': {'min': 0.0004, 'max': 0.001},
+    \item '0.001': {'min': 0.0007, 'max': 0.004},
+    \item '0.004': {'min': 0.001, 'max': 0.007},
+    \item '0.007': {'min': 0.004, 'max': 0.01},
+    \item '0.01': {'min': 0.009, 'max': 0.02}}
+\end{itemize}
+
+End up with 161 combinations of input parameters. Optimisation is separate for each of the five IMD bands, so end up with 810 sets of optimised coefficients. 
+
+Only keep the fits that don't hit the bounds for any IMD band. End up with these two:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l l l l l l l l l l l l l l l}
+start\_option & $q_{min}$ & $q_{max}$ & $c_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared \\
+\hline
+101 & 0.8 & 1 & 0.00019 & 0.0029 & 0.00142 & 0.0024 & 0.0153 & 0.627 \\
+101 & 0.6 & 0.8 & 0.00034 & 0.0010 & 0.00082 & 0.0062 & 0.0150 & 0.613 \\
+101 & 0.4 & 0.6 & 0.00037 & 0.0033 & 0.00077 & 0.0026 & 0.0170 & 0.644 \\
+101 & 0.2 & 0.4 & 0.00049 & 0.0052 & 0.00101 & 0.0030 & 0.0160 & 0.582 \\
+101 & 0.0 & 0.2 & 0.00055 & 0.0069 & 0.00398 & 0.0010 & 0.0161 & 0.496 \\
+\\
+107 & 0.8 & 1 & 0.00023 & 0.0011 & 0.00186 & 0.0034 & 0.0154 & 0.627 \\
+107 & 0.6 & 0.8 & 0.00035 & 0.0010 & 0.00115 & 0.0055 & 0.0152 & 0.613 \\
+107 & 0.4 & 0.6 & 0.00038 & 0.0023 & 0.00101 & 0.0051 & 0.0158 & 0.644 \\
+107 & 0.2 & 0.4 & 0.00048 & 0.0041 & 0.00308 & 0.0035 & 0.0147 & 0.580 \\
+107 & 0.0 & 0.2 & 0.00054 & 0.0057 & 0.00430 & 0.0040 & 0.0150 & 0.494 
+\end{tabular}
+    \caption{Start coeffs for option 101: $c_{<65}$=0.0004, $c_{65-70}$ 0.004, $c_{70-75}$=0.001, $c_{75-80}$=0.004, $c_{>80}$=0.01. Start coeffs for option 107: $c_{<65}$=0.0004, $c_{65-70}$ 0.004, $c_{70-75}$=0.004, $c_{75-80}$=0.004, $c_{>80}$=0.01.}
+    \label{tab:optimised_grid_results}
+\end{table}
+
+No convergence. Maybe loads of local minima, not a nice smooth function.
+
+From this expect decent fits from coefficients on this order of magnitude:
+\begin{itemize}
+    \item $c_{<65}$ 0.0001
+    \item $c_{65-70}$ 0.0001
+    \item $c_{70-75}$ 0.0001
+    \item $c_{75-80}$ 0.001
+    \item $c_{>80}$ 0.015
+\end{itemize}
+
+
+\section{Finer grid with low precision}
+
+No sense finding too precise coefficients because of the lack of convergence in the previous step.
+
+Run another grid, all combinations of various parameters, and only to one or two significant figures. Do not optimise the coefficients.
+
+Coefficient options from rounding the previous two best fits to one significant figure (two for $c_{>80}$) and then allowing buffer room at either end:
+\begin{itemize}
+    \item $c_{<65}$ 8.e-05, 9.e-05, 1.e-04, 2.e-04, 3.e-04, 4.e-04, 5.e-04, 6.e-04,7 .e-04
+    \item $c_{65-70}$ 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009
+    \item $c_{70-75}$ 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006
+    \item $c_{75-80}$ 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009
+    \item $c_{>80}$ 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019
+\end{itemize}
+
+This gives 80,640 combinations of coefficients for 403,200 total fits with the separate IMD bands. Lots of these combinations have terrible (sub-zero) R-squared. The best option for each IMD band uses different coefficients to the other IMD bands:
+
+\begin{table}[h]
+\centering
+
+\begin{tabular}{l l l l l l l l l}
+start\_option & $q_{min}$ & $q_{max}$ & $c_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared \\
+
+40716 & 0.8 & 1.0 & 0.0002 & 0.004 & 0.001 & 0.0008 & 0.016 & 0.628264 \\
+61011 & 0.6 & 0.8 & 0.0004 & 0.001 & 0.002 & 0.004 & 0.015 & 0.615163 \\
+62637 & 0.4 & 0.6 & 0.0004 & 0.003 & 0.0008 & 0.003 & 0.017 & 0.645471 \\
+75580 & 0.2 & 0.4 & 0.0005 & 0.004 & 0.004 & 0.001 & 0.016 & 0.584755 \\
+88228 & 0.0 & 0.2 & 0.0006 & 0.005 & 0.006 & 0.0007 & 0.016 & 0.499943 \\
+\end{tabular}
+    \caption{Best set of coefficients for each IMD band.}
+    \label{tab:best_coeffs}
+\end{table}
+
+
+To trim down the number of options, keep only the ones with coefficients increasing nicely with age. This leaves 51,680 options in five IMD bands.
+
+Then only keep the ones with an R-squared value within some percentage of max available R-squared. To deliberately end up with only around 50 of the best fits, choose these cutoffs:
+\begin{itemize}
+    \item $c_{<65}$ 98.9\%
+    \item $c_{65-70}$ 99.5\%
+    \item $c_{70-75}$ 99.6\%
+    \item $c_{75-80}$ 99.7\%
+    \item $c_{>80}$ 99.5\%
+\end{itemize}
+
+This leaves 255 fits total (42, 47, 62, 53, 51 respectively for the age bands). These are the stats for those 255 fits:
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l l l l l l l l}
+ & $c_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared & rsquared prop of max available \\
+ \hline
+q0.0-0.2 &  &  &  &  &  &  &  \\
+best & 0.00060 & 0.0040 & 0.0050 & 0.0060 & 0.0140 & 0.497 & 0.993 \\
+mean & 0.00066 & 0.0025 & 0.0050 & 0.0068 & 0.0144 & 0.495 & 0.990 \\
+std & 0.00005 & 0.0011 & 0.0007 & 0.0009 & 0.0012 & 0.001 & -- \\
+min & 0.00060 & 0.0008 & 0.0040 & 0.0050 & 0.0120 & 0.494 & 0.989 \\
+max & 0.00070 & 0.0050 & 0.0060 & 0.0080 & 0.0170 & 0.497 & 0.993 \\
+q0.2-0.4 &  &  &  &  &  &  &  \\
+best & 0.00050 & 0.0030 & 0.0040 & 0.0050 & 0.0140 & 0.584 & 0.998 \\
+mean & 0.00058 & 0.0012 & 0.0034 & 0.0059 & 0.0147 & 0.582 & 0.996 \\
+std & 0.00004 & 0.0006 & 0.0008 & 0.0010 & 0.0011 & 0.000 & 0.001 \\
+min & 0.00050 & 0.0007 & 0.0020 & 0.0040 & 0.0130 & 0.582 & 0.995 \\
+max & 0.00060 & 0.0030 & 0.0050 & 0.0080 & 0.0170 & 0.584 & 0.998 \\
+q0.4-0.6 &  &  &  &  &  &  &  \\
+best & 0.00040 & 0.0010 & 0.0020 & 0.0040 & 0.0170 & 0.645 & 0.999 \\
+mean & 0.00040 & 0.0008 & 0.0016 & 0.0054 & 0.0166 & 0.644 & 0.998 \\
+std & 0.00000 & 0.0002 & 0.0008 & 0.0017 & 0.0013 & 0.001 & -- \\
+min & 0.00040 & 0.0007 & 0.0008 & 0.0030 & 0.0150 & 0.643 & 0.996 \\
+max & 0.00040 & 0.0020 & 0.0030 & 0.0090 & 0.0190 & 0.645 & 0.999 \\
+q0.6-0.8 &  &  &  &  &  &  &  \\
+best & 0.00040 & 0.0010 & 0.0020 & 0.0040 & 0.0150 & 0.615 & 1.000 \\
+mean & 0.00042 & 0.0008 & 0.0014 & 0.0048 & 0.0151 & 0.614 & 0.998 \\
+std & 0.00004 & 0.0001 & 0.0006 & 0.0016 & 0.0011 & 0.001 & -- \\
+min & 0.00040 & 0.0007 & 0.0008 & 0.0030 & 0.0130 & 0.613 & 0.997 \\
+max & 0.00050 & 0.0010 & 0.0030 & 0.0090 & 0.0170 & 0.615 & 1.000 \\
+q0.8-1.0 &  &  &  &  &  &  &  \\
+best & 0.00030 & 0.0010 & 0.0020 & 0.0030 & 0.0150 & 0.628 & 1.000 \\
+mean & 0.00028 & 0.0008 & 0.0016 & 0.0043 & 0.0148 & 0.626 & 0.997 \\
+std & 0.00004 & 0.0001 & 0.0007 & 0.0013 & 0.0012 & 0.001 & -- \\
+min & 0.00020 & 0.0007 & 0.0008 & 0.0020 & 0.0130 & 0.625 & 0.995 \\
+max & 0.00030 & 0.0010 & 0.0030 & 0.0060 & 0.0170 & 0.628 & 1.000 \\
+\end{tabular}
+    \caption{Stats for good fits.}
+    \label{tab:good_coeff_stats}
+\end{table}
+
+
+
+\subsection{Combination of results}
+
+Allow different coefficients for each IMD band. Use the 255 fits to find options where coefficients increase nicely across IMD bands.
+
+Of these, pick the best - highest R-squared combination sum.
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l l l l l l l l l l}
+start option & $q_{min}$ & $q_{max}$ & $c_{<65}$ & $c_{65-70}$ & $c_{70-75}$ & $c_{75-80}$ & $c_{>80}$ & rsquared & rsquared\_prop of max available \\
+86173 & 0 & 0.2 & 0.0006 & 0.003 & 0.004 & 0.005 & 0.017 & 0.496 & 0.993 \\
+73589 & 0.2 & 0.4 & 0.0005 & 0.002 & 0.003 & 0.004 & 0.017 & 0.583 & 0.996 \\
+61013 & 0.4 & 0.6 & 0.0004 & 0.001 & 0.002 & 0.004 & 0.017 & 0.645 & 0.999 \\
+61011 & 0.6 & 0.8 & 0.0004 & 0.001 & 0.002 & 0.004 & 0.015 & 0.615 & 1.000 \\
+49483 & 0.8 & 1 & 0.0003 & 0.001 & 0.002 & 0.003 & 0.015 & 0.628 & 1.000 \\
+\end{tabular}
+    \caption{Best combo of fits.}
+    \label{tab:coeffs_best_combo}
+\end{table}
+
+
+Although all are pretty similar (see the options of what went in) and the top X fits are all variations of the top fit.
+
+\end{document}
